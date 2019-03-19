@@ -1,0 +1,3 @@
+http://zsh.sourceforge.net/Intro/intro_3.html
+https://vitux.com/how-to-install-virtualbox-on-ubuntu/
+https://askubuntu.com/questions/363003/no-internet-connection-on-virtualbox-windows-7-as-guest-ubuntu-13-04-as-host

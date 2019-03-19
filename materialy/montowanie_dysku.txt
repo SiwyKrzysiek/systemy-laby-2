@@ -1,0 +1,183 @@
+#!/bin/sh
+# home
+# Montowanie katalogu domowego przy pomocy SMB
+# ato 2006-2018
+
+uzycie() {
+  echo -e "uzycie: $PROG [-hdt] [-c user] [-r [size]]  # montowanie katalogu domowego
+     : bez parametrów - montowanie home protokołem SMB
+  -t : zamontowanie tmpfs w katalogu domowym
+  -m : zamontowanie ram-dysku w katalogu domowym o rozmiarze $size lub 20MB
+  -c : user  kreacja katalogu domowego - punktu montowania dla uzytkownika user
+  -d : debug"
+  exit
+}
+
+fatal () { # [message [n]			# komunikat na stderr + exit n
+  local RED='\e[31m' NOR='\e[m'
+  [ "$1" ] && echo -e 1>&2 "$RED$1$NOR"		# na stderr
+  exit ${2:-1}
+}
+
+zablokuj-sudo () {
+  echo "uwaga: root ma dostęp do Twojego HOME !" >&1
+  echo "zablokuj sudo dla innych poleceniem: sudo-blok +" >&2
+  #$sudo chown $USER:$GROUP $HOME		# XXX sudo ?
+##sudo-blok +					# blokujemy sudo dla innych
+  # TODO: Automatyczne odblokowanie ssh i odmontowanie HOME przy wylogowaniu:
+  #$sudo ssh-tylkoja start
+  #$sudo sh -c "echo -e 'ssh-tylkoja stop ; cd / ; umount -f $HOME' >>  /etc/zlogout"
+}
+
+stacja () {
+  case "`hostname -s`" in
+  volt|amp|ldap) fatal "polecenie do użycia tylko na stacjach - nie na serwerze";;
+  esac
+}
+
+smb () {
+  stacja
+  #$sudo mount_smbfs -u $USER -g $GROUP -L $LANG //$USER@$HOST/$USER $HOME
+  cd /
+  #$sudo umount -f $HOME			# XXX ?
+  eval HOMEDIR=~$USER
+  $sudo mount_smbfs -u $USER -g $GROUP -d 711 -L $LANG //$USER@$HOST/$USER $HOMEDIR &&
+  zablokuj-sudo
+}
+
+nul () {
+  stacja
+  if [ mkdir -p $HOME ]; then
+    #if [ ! -d /home/$GROUP ]; then
+    # katalog pomocniczy z prawem zapisu
+    [ -d /tmp/home ] || mkdir -p /tmp/home
+    mount_nullfs /tmp/home /home/$GROUP
+    [ mkdir -p $HOME ] && fatal "brak katalogu HOME=$HOME"
+  fi
+  chown $USER:$GROUP $HOME
+}
+
+mktmpfs () { #
+  #SIZE=300M
+  #SIZE=1G
+  [ `id -un` = root ] && fatal "'$PROG -t' nie wywolujemy jako root!"
+  mount -p -t tmpfs | grep -q -w $HOME &&  fatal "juz jest zamontowany"
+  local arch=/tmp/.$USER.tar
+  tar cf $arch $HOME 2>/dev/null		# zachowanie HOME przy przemontowaniu ( .ssh .z*)
+  [ "$SIZE" ] && size=-osize=$SIZE
+  $sudo mount -t tmpfs $size tmpfs $HOME
+  $sudo chown $USER:$GROUP $HOME		# XXX: potrzebne ?
+  tar xpCf / $arch && rm $arch
+  homeprep
+  cd
+}
+
+homeprep () {					# inicjalizacja $HOME na ram-dysku
+  # .hist z powrotem z tmp do home:
+  HISTFILE=/tmp/.hist-$LOGNAME			# XXX powinna byc w srodowisku sh (nie jest)
+  # XXX: err: mv: /home/stud/ztest/.hist: set owner/group (was: 6016/0): Operation not permitted
+  [ -f $HISTFILE ] && mv -f $HISTFILE $HOME/.hist 2> /dev/null && HISTFILE=$HOME/.hist 
+  touch ~/.zshrc				# aby zsh nie pytal
+}
+
+# START
+
+PROG=${0##*/}
+
+[ "$DEB" ] && set -x
+
+LANG=${LANG:-pl_PL.UTF-8}			# pl_PL.ISO_8859-2 # jesli pusty lub nie zdefiniowany
+
+USER=${SUDO_USER:-$USER}
+
+typ=smb
+while getopts c:dhmnt opt ; do
+  case "$opt" in
+  c) typ=mkd ; USER=$OPTARG ;;
+  d) set -x ;;
+  h) uzycie -f ;;
+  m) typ=ram ; size=${size:-20m} ;;
+  n) typ=nul ;;
+  t) typ=tmp ;;
+  *) uzycie
+  esac
+done
+shift $(($OPTIND-1))
+
+[ `id -un` = root ] || sudo=sudo
+
+host=`hostname -s`
+
+case "$host" in
+vol*) fatal "polecenie $PROG tylko na stacjach - nie na maszynie $host" ;;
+esac
+
+if [ ! -d $HOME ]; then
+  echo "brak katalogu domowego $HOME"
+  echo "prosze poprosic administartora o wykonanie polcenia: # home -c $USER"
+  exit 1
+fi
+
+GROUP=`id -gn $USER`
+
+case "$GROUP" in				# XXX: LAN czy DMZ ?
+stud) HOST=volt ;;
+prac) HOST=amper ;;				# nazwa WINS nie DNS!
+   *) HOST=volt ;;				# j.w. - vol nie dziala
+esac
+
+case "$typ" in
+mkd) [ "$host" = "amp" ] || fatal "tylko na maszynie amp"
+     $sudo install -d -o $USER -g $GROUP -m 701 /net/ldap/home/$GROUP/$USER /net/vol/home/$GROUP/$USER
+     echo "sleep `sysctl -n vfs.nfs.access_cache_timeout`" ; exit ;;
+smb) smb ;;
+nul) nul ;;
+ram) $sudo mdmfs -s $size -w $USER:$GROUP md $HOME ; homeprep ;;
+tmp) mktmpfs ;;
+#ram) $sudo mdmfs -s $size md $HOME && sudo chown $USER:$GROUP $HOME ; rmdir $HOME/.snap ; touch $HOME/.zshrc ;;
+#tmp) $sudo mount -o nolockd -t tmpfs tmpfs $HOME && $sudo chown $USER:$GROUP $HOME ;;
+esac
+
+# LC_CTYPE
+
+df -h $HOMEDIR
+
+exit
+------------------------------------------------------------------------------
+K           H:        \\vol\ztest               Microsoft Windows Network
+K           K:        \\vol\ftp                 Microsoft Windows Network
+rozłączony  Z:        \\argo\D$                 Microsoft Windows Network
+
+>net use h: /delete
+pomyślnie usunięto h:.
+
+c:\Users\ato>net use h: \\vol\ztest /user:ztest
+Wystąpił błąd systemu 1219.
+
+Wielokrotne połączenia z serwerem lub udostępnionym zasobem przez tego samego użytkownika
+przy użyciu więcej niż jednej nazwy użytkownika są niedozwolone.
+Rozłącz wszystkie poprzednie połączenia z serwerem lub udostępnionym zasobem i spróbuj ponownie.
+
+C:\Users\ato>net use
+Nowe połączenia zostaną zapamiętane.
+
+tan       Lokalny     Zdalny                    Sieć
+
+------------------------------------------------------------------------------
+K           K:        \\vol\ftp                 Microsoft Windows Network
+Połączony   Z:        \\argo\D$                 Microsoft Windows Network
+polecenie zostało wykonane pomyślnie.
+
+
+:\Users\ato>dir k:
+Wolumin w stacji K to ftp
+Numer seryjny woluminu: 8CD1-64BD
+
+Katalog: K:\
+
+013-09-27  05:39    <DIR>          .
+013-10-22  19:51    <DIR>          ..
+013-10-02  02:44    <DIR>          vm
+012-08-24  05:06                18 index.html
+013-09-27  05:39    <DIR>          lok
+013-10-03  10:43    <DIR>          tftpboot
