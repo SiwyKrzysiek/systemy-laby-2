@@ -7,6 +7,7 @@
 \graphicspath{ {./Obrazy/} }
 
 \usepackage{textcomp} % Znaki specjalne takie jak ~
+\usepackage{listings} % Fragmenty kodu
 
 \title{Laboratorium sieci komputerowych -- C1 \\ Wirtualizacja i zdalny dostęp}
 \author{Krzysztof Dąbrowski gr. 3}
@@ -35,7 +36,16 @@ Do tworzenia i zarządzania wirtualnymi maszynami gospodarz potrzebuje specjalne
 \end{itemize}
 
 \subsection{Instalacja wirtualizatora}
+Podczas zajęć wykorzystywany był wirtualizator Virtaul box. W celu automatyzacji instalacji programu napisany został skrypt.
+\begin{lstlisting}[language=sh]
+    #!/bin/sh
+    sudo apt-get update
+    sudo apt install virtualbox
+    sudo apt install virtualbox-ext-pack 
+\end{lstlisting}
+Instaluje on program Virtual box oraz związaną z nim paczkę rozszerzeń. 
 
+W celu możliwości korzystania z tego skryptu z dowolnego katalogu należało dopisać folder ze skryptem do zmiennej \texttt{PATH}. By ta zmiana dokonywała się automatycznie za każdym razem trzeba dodać eksport zmiennej \texttt{PATH} to pliku konfiguracyjnego \texttt{.zshenv}. Dzięki temu interpreter poleceń zsh automatycznie ustawi zmienną.
 
 
 \end{document}
