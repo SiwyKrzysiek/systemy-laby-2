@@ -47,5 +47,15 @@ Instaluje on program Virtual box oraz związaną z nim paczkę rozszerzeń.
 
 W celu możliwości korzystania z tego skryptu z dowolnego katalogu należało dopisać folder ze skryptem do zmiennej \texttt{PATH}. By ta zmiana dokonywała się automatycznie za każdym razem trzeba dodać eksport zmiennej \texttt{PATH} to pliku konfiguracyjnego \texttt{.zshenv}. Dzięki temu interpreter poleceń zsh automatycznie ustawi zmienną.
 
+\subsection{Wirtualna maszyna}
+Program Vitrual box oferuje bogaty interfejs graficzny. Za jego pomocą utworzona została maszyna o typie -- FreeBSD, ilości dostępnego ramu -- 1GB oraz bez dysku twardego.
+
+Po przejściu przez początkowe ekrany kreacji możliwe było dodanie interfejsu do podłączenia płyty. Do wirtualnej stacji płyt został włożony dysk .iso z obrazem \textit{liveCD} systemu FreeBSD. Płyta tego typu umożliwia start systemu bez dysku twardego. Wszystkie informacje przechowywane są w pamięci RAM.
+
+\paragraph{Wczytanie systemu z sieci} było ostatnim zadaniem przewidzianym na \\ pierwsze spotkanie. By umożliwić start systemu z sieci należało ustawić konfigurację sieciową gościa. Kluczowe było wybranie \textbf{połączenia mostkowego} by umożliwić dwukierunkową komunikację gościa z siecią. \\ Pozostałe ustawienia wyglądały następująco:
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.95\textwidth]{ustawienia_karty_sieciowej}
+\end{figure}
 
 \end{document}
